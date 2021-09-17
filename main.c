@@ -7,8 +7,8 @@
 /*
 Para compilar:
 1 - Abrir o local do fonte
-2 - Digitar para compilar: mpicc -o mpi main.c
-3 - Digitar para rodar: mpirun -np <numero_processos> ./mpi <imagem_entrada> <imagem_saida> <mascara>
+2 - Digitar para compilar: gcc main.c -o main -lm
+3 - Digitar para rodar: ./main borboleta.bmp saida.bmp 3
 */
 
 struct cabecalho {
@@ -40,215 +40,182 @@ typedef struct rgb RGB;
 
 int main(int argc, char **argv ){
 	char *entrada, *saida;
-	int tamanhoMascara, nth;
-
+	char ali, aux;
+	int nroProcessos;
 	int iForImagem, jForImagem;
-	int i2, j2;
-	char aux;
-	int ali, limiteI, limiteJ, iForOrdenar, jForOrdenar;
-	int iTamanhoAux, posicaoMediana, lacoI, lacoJ, iTamanhoAux2;
-	int range;
-	int np, id;
-	RGB *imagem, *imagemSaida;
-	RGB *imagemSaidaFinal;
-	RGB *imagemAux;
-	double ti,tf;
-	
-	CABECALHO cabecalho;
+	int range, meio;
+	int lacoJ, limiteJ;
+	int lacoI, limiteI;
+	int posMatriz;
+	int MascaraX[3*3], MascaraY[3*3];
+	int tamMatrizAux;
+	int iForAux, jForAux;
+	int xRed   ;
+	int xGreen ;
+	int xBlue  ;
+	int yRed   ;
+	int yGreen ;
+	int yBlue  ;
+	int posTeste;
+	int iForSobel;
+	int jForSobel;
 
+	CABECALHO cabecalho;
+	RGB *imagemEntrada, *imagemSaida;
+	RGB *imagemX, *imagemY;
+	
 	if ( argc != 4){
-		printf("%s <img_entrada> <img_saida> <mascara> \n", argv[0]);
+		printf("%s <img_entrada> <img_saida> <processos> \n", argv[0]);
 		exit(0);
 	}
 
-	entrada = argv[1];
-	saida = argv[2];
-    tamanhoMascara = atoi(argv[3]);
+	entrada 		= argv[1];
+	saida 			= argv[2];
+    nroProcessos 	= atoi(argv[3]);
 
 	FILE *fin = fopen(entrada, "rb");
-
 	if ( fin == NULL ){
-		printf("Erro ao abrir o arquivo %s\n", entrada);
+		printf("Erro ao abrir o arquivo entrada%s\n", entrada);
 		exit(0);
 	}
 
 	FILE *fout = fopen(saida, "wb");
-
 	if ( fout == NULL ){
-		printf("Erro ao abrir o arquivo %s\n", saida);
+		printf("Erro ao abrir o arquivo saida %s\n", saida);
 		exit(0);
 	}
-	
-	fread(&cabecalho, sizeof(CABECALHO), 1, fin);
-	/*
-	printf("Tamanho da imagem: %u\n", cabecalho.tamanho_arquivo);
-	printf("Largura: %d\n", cabecalho.largura);
-	printf("Largura: %d\n", cabecalho.altura);
-	printf("Bits por pixel: %d\n", cabecalho.bits_por_pixel);
-	*/
-	fwrite(&cabecalho, sizeof(CABECALHO), 1, fout);
 
-	 
+	//Ler cabecalho entrada
+	fread(&cabecalho, sizeof(CABECALHO), 1, fin);	
 
-	//Alocar imagem
-	RGB rgbAux[tamanhoMascara*tamanhoMascara];
-	RGB rgbAux2;	
-	
-	imagemSaida  = (RGB *)malloc(cabecalho.altura*cabecalho.largura*sizeof(RGB));
-	imagemAux  = (RGB *)malloc(cabecalho.altura/np*cabecalho.largura*sizeof(RGB));
-	imagemSaidaFinal  = (RGB *)malloc(cabecalho.altura*cabecalho.largura*sizeof(RGB));
+	//Alocar imagems
+	imagemEntrada   = (RGB *)malloc(cabecalho.altura*cabecalho.largura*sizeof(RGB));
+	imagemSaida  	= (RGB *)malloc(cabecalho.altura*cabecalho.largura*sizeof(RGB));
+	imagemX  		= (RGB *)malloc((3*3)*sizeof(RGB));
+	imagemY  		= (RGB *)malloc((3*3)*sizeof(RGB));
 
-	//if (id == 0){
-		imagem  = (RGB *)malloc(cabecalho.altura*cabecalho.largura*sizeof(RGB));
+	//MascaraX
+	MascaraX[0] = -1; //P1
+	MascaraX[1] =  0; //P2
+	MascaraX[2] =  1; //P3
+	MascaraX[3] = -2; //P4
+	MascaraX[4] =  0; //P5 - Central
+	MascaraX[5] =  2; //P6
+	MascaraX[6] = -1; //P7
+	MascaraX[7] =  0; //P8
+	MascaraX[8] =  1; //P9
 
-		//Leitura da imagem
-		for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
-			ali = (cabecalho.largura * 3) % 4;
+	//MascaraY
+	MascaraY[0] =  1; //P1
+	MascaraY[1] =  2; //P2
+	MascaraY[2] =  1; //P3
+	MascaraY[3] =  0; //P4
+	MascaraY[4] =  0; //P5 - Central
+	MascaraY[5] =  0; //P6
+	MascaraY[6] = -1; //P7
+	MascaraY[7] = -2; //P8
+	MascaraY[8] = -1; //P9
 
-			if (ali != 0){
-				ali = 4 - ali;
-			}
+	//Leitura da imagem entrada
+	for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
+		ali = (cabecalho.largura * 3) % 4;
 
-			for(jForImagem=0; jForImagem<cabecalho.largura; jForImagem++){
-				fread(&imagem[iForImagem * cabecalho.largura + jForImagem], sizeof(RGB), 1, fin);
-			}
-
-			for(jForImagem=0; jForImagem<ali; jForImagem++){
-				fread(&aux, sizeof(unsigned char), 1, fin);
-			}
+		if (ali != 0){
+			ali = 4 - ali;
 		}
 
-	//}
-
-	//Processar imagem
-    if (tamanhoMascara == 3) {
-        range = 1;
-        posicaoMediana = 4;
-    }
-    else if (tamanhoMascara == 5) {
-        range = 2;
-        posicaoMediana = 12;
-    }
-    else if (tamanhoMascara == 7) {
-        range = 3;
-        posicaoMediana = 24;
-    }
-
-	for(iForImagem=0; iForImagem<cabecalho.altura/np; iForImagem++){
 		for(jForImagem=0; jForImagem<cabecalho.largura; jForImagem++){
-			//Calcular range do laco for para mediana
-			lacoI = iForImagem-range;
-			limiteI = iForImagem + range;
+			fread(&imagemEntrada[iForImagem * cabecalho.largura + jForImagem], sizeof(RGB), 1, fin);
+		}
 
-			lacoJ = jForImagem-range;
-			limiteJ = jForImagem + range;
-
-            if (lacoI < 0) lacoI = 0;
-			if (lacoJ < 0) lacoJ = 0;
-
-            if (limiteI > (cabecalho.altura - 1))  limiteI = (cabecalho.altura - 1);
-			if (limiteJ > (cabecalho.largura - 1)) limiteJ = (cabecalho.largura - 1);
-
-			//Limpar variaveis auxiliares
-            for(iTamanhoAux2=0; iTamanhoAux2<tamanhoMascara*tamanhoMascara; iTamanhoAux2++){
-                rgbAux[iTamanhoAux2].red   = 0;
-                rgbAux[iTamanhoAux2].green = 0;
-                rgbAux[iTamanhoAux2].blue  = 0;
-			}
-
-			rgbAux2.red   = 0;
-            rgbAux2.green = 0;
-            rgbAux2.blue  = 0;
-
-            iTamanhoAux  = 0;
-            iTamanhoAux2 = 0;
-
-			//Calcular a mediana de cada pixel da imagem.
-			for(i2=lacoI; i2<=limiteI; i2++){
-				for(j2=lacoJ; j2<=limiteJ; j2++){
-					rgbAux[iTamanhoAux].red   = imagemAux[i2*cabecalho.largura+j2].red;
-					rgbAux[iTamanhoAux].green = imagemAux[i2*cabecalho.largura+j2].green;
-					rgbAux[iTamanhoAux].blue  = imagemAux[i2*cabecalho.largura+j2].blue;
-
-					iTamanhoAux++;
-				}
-			}
-
-			//Ordenar vetores red
-            for (iForOrdenar = 0; iForOrdenar < iTamanhoAux; iForOrdenar++)
-            {
-                for (jForOrdenar = 0; jForOrdenar < iTamanhoAux; jForOrdenar++)
-                {
-                    if (rgbAux[iForOrdenar].red < rgbAux[jForOrdenar].red)
-                    {
-                        rgbAux2.red             = rgbAux[iForOrdenar].red;
-                        rgbAux[iForOrdenar].red = rgbAux[jForOrdenar].red;
-                        rgbAux[jForOrdenar].red = rgbAux2.red;
-                    }
-                }
-            }
-
-            //Ordenar vetores green
-            for (iForOrdenar = 0; iForOrdenar < iTamanhoAux; iForOrdenar++)
-            {
-                for (jForOrdenar = 0; jForOrdenar < iTamanhoAux; jForOrdenar++)
-                {
-                    if (rgbAux[iForOrdenar].green < rgbAux[jForOrdenar].green)
-                    {
-                        rgbAux2.green             = rgbAux[iForOrdenar].green;
-                        rgbAux[iForOrdenar].green = rgbAux[jForOrdenar].green;
-                        rgbAux[jForOrdenar].green = rgbAux2.green;
-                    }
-                }
-            }
-
-            //Ordenar vetores blue
-            for (iForOrdenar = 0; iForOrdenar < iTamanhoAux; iForOrdenar++)
-            {
-                for (jForOrdenar = 0; jForOrdenar < iTamanhoAux; jForOrdenar++)
-                {
-                    if (rgbAux[iForOrdenar].blue < rgbAux[jForOrdenar].blue)
-                    {
-                        rgbAux2.blue             = rgbAux[iForOrdenar].blue;
-                        rgbAux[iForOrdenar].blue = rgbAux[jForOrdenar].blue;
-                        rgbAux[jForOrdenar].blue = rgbAux2.blue;
-                    }
-                }
-            }
-
-            //Substituir valores pela mediana de cada pixel
-			imagemSaida[iForImagem * cabecalho.largura + jForImagem].red    = rgbAux[posicaoMediana].red;
-			imagemSaida[iForImagem * cabecalho.largura + jForImagem].green  = rgbAux[posicaoMediana].green;
-			imagemSaida[iForImagem * cabecalho.largura + jForImagem].blue   = rgbAux[posicaoMediana].blue;	
+		for(jForImagem=0; jForImagem<ali; jForImagem++){
+			fread(&aux, sizeof(unsigned char), 1, fin);
 		}
 	}
 
-	//if (id == 0){
-		//Escrever a imagem
-		for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
-			ali = (cabecalho.largura * 3) % 4;
+	//Transformar em escala de cinza
+	for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
+		for(jForImagem=0; jForImagem<cabecalho.largura; jForImagem++){
+			posMatriz = iForImagem * cabecalho.largura + jForImagem;
 
-			if (ali != 0){
-				ali = 4 - ali;
-			}
-
-			for(jForImagem=0; jForImagem<cabecalho.largura; jForImagem++){
-				fwrite(&imagemSaidaFinal[iForImagem * cabecalho.largura + jForImagem], sizeof(RGB), 1, fout);
-			}
-
-			for(jForImagem=0; jForImagem<ali; jForImagem++){
-				fwrite(&aux, sizeof(unsigned char), 1, fout);
-			}
+			imagemSaida[posMatriz].red    = 0.2126 * imagemEntrada[posMatriz].red;
+			imagemSaida[posMatriz].green  = 0.7152 * imagemEntrada[posMatriz].green;
+			imagemSaida[posMatriz].blue   = 0.0722 * imagemEntrada[posMatriz].blue;		
 		}
-	//}
+	}
+
+	//Varrer os pixels da imagem
+	for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
+		for(jForImagem=0; jForImagem<cabecalho.largura; jForImagem++){
+			xRed   = 0;
+			xGreen = 0;
+			xBlue  = 0;
+			yRed   = 0;
+			yGreen = 0;
+			yBlue  = 0;
+
+			iForSobel = ((iForImagem * cabecalho.largura) - 1);
+			jForSobel = (jForImagem - 1);
+
+			//Aplicar o filtro sobel no pixel
+			for (iForAux=0;iForAux<3;iForAux++){
+				for (jForAux=0;jForAux<3;jForAux++){
+					if ((iForSobel >= 0) && (jForSobel >= 0)) {
+						posTeste = (iForSobel + jForSobel);
+
+						xRed   += imagemSaida[posTeste].red   * MascaraX[iForAux];
+						xGreen += imagemSaida[posTeste].green * MascaraX[iForAux];
+						xBlue  += imagemSaida[posTeste].blue  * MascaraX[iForAux];
+
+						yRed   += imagemSaida[posTeste].red   * MascaraY[iForAux];
+						yGreen += imagemSaida[posTeste].green * MascaraY[iForAux];
+						yBlue  += imagemSaida[posTeste].blue  * MascaraY[iForAux];
+					}
+
+					jForSobel++;
+				}
+
+				iForSobel++;
+				jForSobel = (jForImagem - 1);
+			}
+
+			posMatriz = (iForImagem * cabecalho.largura) + jForImagem;
+
+			imagemSaida[posMatriz].red    = sqrt(pow(xRed,2)   + pow(yRed,2));
+			imagemSaida[posMatriz].green  = sqrt(pow(xGreen,2) + pow(yGreen,2));
+			imagemSaida[posMatriz].blue   = sqrt(pow(xBlue,2)  + pow(yBlue,2));
+
+			//Gambia pra debugar
+			// int r,g,b;
+			// r = imagemSaida[posMatriz].red ;
+			// g = imagemSaida[posMatriz].green ;
+			// b = imagemSaida[posMatriz].blue ;
+			// printf("%i, %i, %i\n",r,g,b);
+		}
+	}
+
+	//Escrever cabecalho saida
+	fwrite(&cabecalho, sizeof(CABECALHO), 1, fout);
+
+	//Escrever a imagem saida
+	for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
+		ali = (cabecalho.largura * 3) % 4;
+
+		if (ali != 0){
+			ali = 4 - ali;
+		}
+
+		for(jForImagem=0; jForImagem<cabecalho.largura; jForImagem++){
+			fwrite(&imagemSaida[iForImagem * cabecalho.largura + jForImagem], sizeof(RGB), 1, fout);
+		}
+
+		for(jForImagem=0; jForImagem<ali; jForImagem++){
+			fwrite(&aux, sizeof(unsigned char), 1, fout);
+		}
+	}
 
 	fclose(fin);
 	fclose(fout);
 
-//	if ( id == 0 ){
-//		printf("Arquivo gerado: %s com a ", saida);
-//		printf("mascara: %d\n", tamanhoMascara);
-//		printf("Tempo de execução: %f\n", tf - ti);
-//	}
-	
+	printf("Arquivo %s gerado.\n", saida);
 }
