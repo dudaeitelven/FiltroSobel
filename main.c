@@ -56,7 +56,7 @@ int main(int argc, char **argv ){
 	int MascaraX[3*3], MascaraY[3*3];
 	int valorX   ;
 	int valorY   ;
-	int iPosLinha;
+	int iPosLinha, jPosColuna;
 	int pid, id_seq;
 	int shmid, chave = 5;
 
@@ -153,33 +153,34 @@ int main(int argc, char **argv ){
 		for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
 			for(jForImagem=0; jForImagem<cabecalho.largura; jForImagem++){
 				iPosLinha  = iForImagem * cabecalho.largura;
+				jPosColuna = jForImagem;
 				iPosMatriz = iPosLinha + jForImagem;
 
 				//Mascara X
-				valorX   =  MascaraX[0] * imagemSaida[(iPosLinha-1) + (jForImagem-1)].red;
-				valorX   += MascaraX[1] * imagemSaida[(iPosLinha-1) + (jForImagem)].red; 
-				valorX   += MascaraX[2] * imagemSaida[(iPosLinha-1) + (jForImagem+1)].red; 
+				valorX   =  MascaraX[0] * imagemSaida[(iPosLinha-600) + (jPosColuna-1)].red;
+				valorX   += MascaraX[1] * imagemSaida[(iPosLinha-600) + (jPosColuna)].red;
+				valorX   += MascaraX[2] * imagemSaida[(iPosLinha-600) + (jPosColuna+1)].red;
 
-				valorX   += MascaraX[3] * imagemSaida[(iPosLinha)   + (jForImagem-1)].red; 
-				valorX   += MascaraX[4] * imagemSaida[(iPosLinha)   + (jForImagem)].red; 
-				valorX   += MascaraX[5] * imagemSaida[(iPosLinha)   + (jForImagem+1)].red; 
+				valorX   += MascaraX[3] * imagemSaida[(iPosLinha) + (jPosColuna-1)].red; 
+				valorX   += MascaraX[4] * imagemSaida[(iPosLinha) + (jPosColuna)].red;
+				valorX   += MascaraX[5] * imagemSaida[(iPosLinha) + (jPosColuna+1)].red; 
 				
-				valorX   += MascaraX[6] * imagemSaida[(iPosLinha+1) + (jForImagem-1)].red; 
-				valorX   += MascaraX[7] * imagemSaida[(iPosLinha+1) + (jForImagem)].red; 
-				valorX   += MascaraX[8] * imagemSaida[(iPosLinha+1) + (jForImagem+1)].red; 
+				valorX   += MascaraX[6] * imagemSaida[(iPosLinha+600) + (jPosColuna-1)].red;
+				valorX   += MascaraX[7] * imagemSaida[(iPosLinha+600) + (jPosColuna)].red; 
+				valorX   += MascaraX[8] * imagemSaida[(iPosLinha+600) + (jPosColuna+1)].red; 
 
 				//MascaraY
-				valorY   =  MascaraY[0] * imagemSaida[(iPosLinha-1) + (jForImagem-1)].red; 
-				valorY   += MascaraY[1] * imagemSaida[(iPosLinha-1) + (jForImagem)].red; 
-				valorY   += MascaraY[2] * imagemSaida[(iPosLinha-1) + (jForImagem+1)].red; 
+				valorY   =  MascaraY[0] * imagemSaida[(iPosLinha-600) + (jPosColuna-1)].red;
+				valorY   += MascaraY[1] * imagemSaida[(iPosLinha-600) + (jPosColuna)].red;
+				valorY   += MascaraY[2] * imagemSaida[(iPosLinha-600) + (jPosColuna+1)].red;
 
-				valorY   += MascaraY[3] * imagemSaida[(iPosLinha)	+ (jForImagem-1)].red;
-				valorY   += MascaraY[4] * imagemSaida[(iPosLinha)   + (jForImagem)].red; 
-				valorY   += MascaraY[5] * imagemSaida[(iPosLinha)   + (jForImagem+1)].red;
+				valorY   += MascaraY[3] * imagemSaida[(iPosLinha) + (jPosColuna-1)].red; 
+				valorY   += MascaraY[4] * imagemSaida[(iPosLinha) + (jPosColuna)].red;
+				valorY   += MascaraY[5] * imagemSaida[(iPosLinha) + (jPosColuna+1)].red; 
 
-				valorY   += MascaraY[6] * imagemSaida[(iPosLinha+1) + (jForImagem-1)].red; 
-				valorY   += MascaraY[7] * imagemSaida[(iPosLinha+1) + (jForImagem)].red; 
-				valorY   += MascaraY[8] * imagemSaida[(iPosLinha+1) + (jForImagem+1)].red; 
+				valorY   += MascaraY[6] * imagemSaida[(iPosLinha+600) + (jPosColuna-1)].red;
+				valorY   += MascaraY[7] * imagemSaida[(iPosLinha+600) + (jPosColuna)].red; 
+				valorY   += MascaraY[8] * imagemSaida[(iPosLinha+600) + (jPosColuna+1)].red; 
 
 				//Imagem de saida		
 				imagemSaida[iPosMatriz].red    = sqrt(pow(valorX,2) + pow(valorY,2));
