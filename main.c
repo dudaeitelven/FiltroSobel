@@ -114,15 +114,15 @@ int main(int argc, char **argv ){
 	MascaraX[8] =  1; //P9
 
 	//MascaraY
-	MascaraY[0] =  1; //P1
-	MascaraY[1] =  2; //P2
-	MascaraY[2] =  1; //P3
+	MascaraY[0] = -1; //P1
+	MascaraY[1] = -2; //P2
+	MascaraY[2] = -1; //P3
 	MascaraY[3] =  0; //P4
 	MascaraY[4] =  0; //P5 - Central
 	MascaraY[5] =  0; //P6
-	MascaraY[6] = -1; //P7
-	MascaraY[7] = -2; //P8
-	MascaraY[8] = -1; //P9
+	MascaraY[6] =  1; //P7
+	MascaraY[7] =  2; //P8
+	MascaraY[8] =  1; //P9
 
 	//Leitura da imagem entrada
 	for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
@@ -180,7 +180,7 @@ int main(int argc, char **argv ){
 				valorY   = MascaraY[0] * imagemCinza[(iPosLinhaAnt) + (jPosColunaAnt)].red
 						 + MascaraY[1] * imagemCinza[(iPosLinhaAnt) + (jPosColuna)].red
 						 + MascaraY[2] * imagemCinza[(iPosLinhaAnt) + (jPosColunaPrx)].red
-						 + MascaraX[3] * imagemCinza[(iPosLinha)    + (jPosColunaAnt)].red
+						 + MascaraY[3] * imagemCinza[(iPosLinha)    + (jPosColunaAnt)].red
 						 + MascaraY[4] * imagemCinza[(iPosLinha)    + (jPosColuna)].red
 						 + MascaraY[5] * imagemCinza[(iPosLinha)    + (jPosColunaPrx)].red
 						 + MascaraY[6] * imagemCinza[(iPosLinhaPrx) + (jPosColunaAnt)].red
