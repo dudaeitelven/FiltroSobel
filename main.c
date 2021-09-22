@@ -153,8 +153,9 @@ int main(int argc, char **argv ){
 
 	if (1 == 1){
 		//Varrer os pixels da imagem
-		for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
-			for(jForImagem=0; jForImagem<cabecalho.largura; jForImagem++){
+		for(iForImagem=1; iForImagem<cabecalho.altura-1; iForImagem++){
+			for(jForImagem=1; jForImagem<cabecalho.largura-1; jForImagem++){
+				//Calcular as posicoes
 				iPosLinhaAnt  = (iForImagem-1) * cabecalho.largura;
 				jPosColunaAnt = jForImagem-1;
 
@@ -163,64 +164,44 @@ int main(int argc, char **argv ){
 
 				iPosLinhaPrx  = (iForImagem+1) * cabecalho.largura;
 				jPosColunaPrx = jForImagem+1;
-				
-				valorX = 0;
-				valorY = 0;
 
 				//Mascaras
-				if ((iForImagem-1 >=0) && (iForImagem-1 <=399)) {
-					if ((jPosColunaAnt >=0) && (jPosColunaAnt <=599)) {
-						valorX   =  MascaraX[0] * imagemSaida[(iPosLinhaAnt) + (jPosColunaAnt)].red;
-						valorY   =  MascaraY[0] * imagemSaida[(iPosLinhaAnt) + (jPosColunaAnt)].red;
-						//printf("%i, %i - %i\n",iForImagem-1,jPosColunaAnt,(iPosLinhaAnt) + (jPosColunaAnt));
-					}
-				} 
-				if ((iForImagem-1 >=0) && (iForImagem-1 <=399)) {
-					valorX   += MascaraX[1] * imagemSaida[(iPosLinhaAnt) + (jPosColuna)].red;
-					valorY   += MascaraY[1] * imagemSaida[(iPosLinhaAnt) + (jPosColuna)].red;
-					//printf("%i, %i - %i\n",iForImagem-1,jPosColuna,(iPosLinhaAnt) + (jPosColuna));
-				} 
-				if ((iForImagem-1 >=0) && (iForImagem-1 <=399)) {
-					if ((jPosColunaPrx >=0) && (jPosColunaPrx <=599)) {
-						valorX   += MascaraX[2] * imagemSaida[(iPosLinhaAnt) + (jPosColunaPrx)].red;
-						valorY   += MascaraY[2] * imagemSaida[(iPosLinhaAnt) + (jPosColunaPrx)].red;
-						//printf("%i, %i - %i\n",iForImagem-1,jPosColunaPrx,(iPosLinhaAnt) + (jPosColunaPrx));
-					}
-				}
-				
-				if ((jPosColunaAnt >=0) && (jPosColunaAnt <=599)) {
-					valorX   += MascaraX[3] * imagemSaida[(iPosLinha) + (jPosColunaAnt)].red; 
-					valorY   += MascaraX[3] * imagemSaida[(iPosLinha) + (jPosColunaAnt)].red; 
-					//printf("%i, %i - %i\n",iForImagem,jPosColunaAnt,(iPosLinha) + (jPosColunaAnt));
-				}
-				valorX   += MascaraX[4] * imagemSaida[(iPosLinha) + (jPosColuna)].red;
-				//printf("%i, %i - %i\n",iForImagem,jPosColuna,(iPosLinha) + (jPosColuna)); 
-				if ((jPosColunaPrx >=0) && (jPosColunaPrx <=599)) {
-					valorX   += MascaraX[5] * imagemSaida[(iPosLinha) + (jPosColunaPrx)].red;
-					valorY   += MascaraY[5] * imagemSaida[(iPosLinha) + (jPosColunaPrx)].red;
-					//printf("%i, %i - %i\n",iForImagem,jPosColunaPrx,(iPosLinha) + (jPosColunaPrx));
-				}
-				
-				if ((iForImagem+1 >=0) && (iForImagem+1 <=399)) {
-					if ((jPosColunaAnt >=0) && (jPosColunaAnt <=599)) {
-						valorX   += MascaraX[6] * imagemSaida[(iPosLinhaPrx) + (jPosColunaAnt)].red;
-						valorY   += MascaraY[6] * imagemSaida[(iPosLinhaPrx) + (jPosColunaAnt)].red;
-						//printf("%i, %i - %i\n",iForImagem+1,jPosColunaAnt,(iPosLinhaPrx) + (jPosColunaAnt));
-					}
-				} 
-				if ((iForImagem+1 >=0) && (iForImagem+1 <=399)) {
-					valorX   += MascaraX[7] * imagemSaida[(iPosLinhaPrx) + (jPosColuna)].red; 
-					valorY   += MascaraY[7] * imagemSaida[(iPosLinhaPrx) + (jPosColuna)].red; 
-					//printf("%i, %i - %i\n",iForImagem+1,jPosColuna, (iPosLinhaPrx) + (jPosColuna));
-				}
-				if ((iForImagem+1 >=0) && (iForImagem+1 <=399)) {
-					if ((jPosColunaPrx >=0) && (jPosColunaPrx <=599)) {
-						valorX   += MascaraX[8] * imagemSaida[(iPosLinhaPrx) + (jPosColunaPrx)].red; 
-						valorY   += MascaraY[8] * imagemSaida[(iPosLinhaPrx) + (jPosColunaPrx)].red;
-						////printf("%i, %i - %i\n",iForImagem+1,jPosColunaPrx,(iPosLinhaPrx) + (jPosColunaPrx));
-					}
-				}
+				valorX   =  MascaraX[0] * imagemSaida[(iPosLinhaAnt) + (jPosColunaAnt)].red;
+				valorY   =  MascaraY[0] * imagemSaida[(iPosLinhaAnt) + (jPosColunaAnt)].red;
+				//printf("%i, %i - %i\n",iForImagem-1,jPosColunaAnt,(iPosLinhaAnt) + (jPosColunaAnt));
 
+				valorX   += MascaraX[1] * imagemSaida[(iPosLinhaAnt) + (jPosColuna)].red;
+				valorY   += MascaraY[1] * imagemSaida[(iPosLinhaAnt) + (jPosColuna)].red;
+				//printf("%i, %i - %i\n",iForImagem-1,jPosColuna,(iPosLinhaAnt) + (jPosColuna));
+
+				valorX   += MascaraX[2] * imagemSaida[(iPosLinhaAnt) + (jPosColunaPrx)].red;
+				valorY   += MascaraY[2] * imagemSaida[(iPosLinhaAnt) + (jPosColunaPrx)].red;
+				//printf("%i, %i - %i\n",iForImagem-1,jPosColunaPrx,(iPosLinhaAnt) + (jPosColunaPrx));
+
+				valorX   += MascaraX[3] * imagemSaida[(iPosLinha) + (jPosColunaAnt)].red; 
+				valorY   += MascaraX[3] * imagemSaida[(iPosLinha) + (jPosColunaAnt)].red; 
+				//printf("%i, %i - %i\n",iForImagem,jPosColunaAnt,(iPosLinha) + (jPosColunaAnt));
+
+				valorX   += MascaraX[4] * imagemSaida[(iPosLinha) + (jPosColuna)].red;
+				valorY   += MascaraY[4] * imagemSaida[(iPosLinha) + (jPosColuna)].red;
+				//printf("%i, %i - %i\n",iForImagem,jPosColuna,(iPosLinha) + (jPosColuna)); 
+
+				valorX   += MascaraX[5] * imagemSaida[(iPosLinha) + (jPosColunaPrx)].red;
+				valorY   += MascaraY[5] * imagemSaida[(iPosLinha) + (jPosColunaPrx)].red;
+				//printf("%i, %i - %i\n",iForImagem,jPosColunaPrx,(iPosLinha) + (jPosColunaPrx));
+
+				valorX   += MascaraX[6] * imagemSaida[(iPosLinhaPrx) + (jPosColunaAnt)].red;
+				valorY   += MascaraY[6] * imagemSaida[(iPosLinhaPrx) + (jPosColunaAnt)].red;
+				//printf("%i, %i - %i\n",iForImagem+1,jPosColunaAnt,(iPosLinhaPrx) + (jPosColunaAnt));
+
+				valorX   += MascaraX[7] * imagemSaida[(iPosLinhaPrx) + (jPosColuna)].red; 
+				valorY   += MascaraY[7] * imagemSaida[(iPosLinhaPrx) + (jPosColuna)].red; 
+				//printf("%i, %i - %i\n",iForImagem+1,jPosColuna, (iPosLinhaPrx) + (jPosColuna));
+
+				valorX   += MascaraX[8] * imagemSaida[(iPosLinhaPrx) + (jPosColunaPrx)].red; 
+				valorY   += MascaraY[8] * imagemSaida[(iPosLinhaPrx) + (jPosColunaPrx)].red;
+				////printf("%i, %i - %i\n",iForImagem+1,jPosColunaPrx,(iPosLinhaPrx) + (jPosColunaPrx));
+		
 				//Imagem de saida		
 				iPosMatriz = iPosLinha + jForImagem;
 
@@ -262,5 +243,5 @@ int main(int argc, char **argv ){
 	free(imagemX);
     free(imagemY);
 
-	//printf("Arquivo %s gerado.\n", saida);
+	printf("Arquivo %s gerado.\n", saida);
 }
