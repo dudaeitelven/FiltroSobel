@@ -14,7 +14,7 @@
 Para compilar:
 1 - Abrir o local do fonte
 2 - Digitar para compilar: gcc main.c -o main -lm
-3 - Digitar para rodar: ./main borboleta.bmp saida.bmp 3
+3 - Digitar para rodar: ./main borboleta.bmp saida.bmp 4
 */
 
 struct cabecalho {
@@ -62,14 +62,16 @@ int main(int argc, char **argv ){
 
 	int pid, id_seq;
 	int shmid, chave = 5;
+	int i;
 
 	CABECALHO cabecalho;
 	RGB *imagemEntrada, *imagemSaida;
 	RGB *imagemX, *imagemY;
 	RGB *imagemCinza;
+	RGB *imagemCompartilhada;
 	
 	if ( argc != 4){
-		//printf("%s <img_entrada> <img_saida> <num_proc> \n", argv[0]);
+		printf("%s <img_entrada> <img_saida> <num_proc> \n", argv[0]);
 		exit(0);
 	}
 
@@ -79,13 +81,13 @@ int main(int argc, char **argv ){
 
 	FILE *fin = fopen(entrada, "rb");
 	if ( fin == NULL ){
-		//printf("Erro ao abrir o arquivo entrada%s\n", entrada);
+		printf("Erro ao abrir o arquivo entrada %s\n", entrada);
 		exit(0);
 	}
 
 	FILE *fout = fopen(saida, "wb");
 	if ( fout == NULL ){
-		//printf("Erro ao abrir o arquivo saida %s\n", saida);
+		printf("Erro ao abrir o arquivo saida %s\n", saida);
 		exit(0);
 	}
 
@@ -94,13 +96,10 @@ int main(int argc, char **argv ){
 
 	//Alocar imagems
 	imagemEntrada   = (RGB *)malloc(cabecalho.altura*cabecalho.largura*sizeof(RGB));
-	imagemSaida  	= (RGB *)malloc(cabecalho.altura*cabecalho.largura*sizeof(RGB));
+	//imagemSaida  	= (RGB *)malloc(cabecalho.altura*cabecalho.largura*sizeof(RGB));
 	imagemCinza  	= (RGB *)malloc(cabecalho.altura*cabecalho.largura*sizeof(RGB));
 	imagemX  		= (RGB *)malloc((3*3)*sizeof(RGB));
 	imagemY  		= (RGB *)malloc((3*3)*sizeof(RGB));
-	
-    // shmid = shmget(chave, cabecalho.altura*cabecalho.largura*sizeof(RGB), 0600 | IPC_CREAT);
-	// imagemSaidaTeste = (RGB *)shmat(shmid, 0, 0);
 
 	//MascaraX
 	MascaraX[0] = -1; //P1
@@ -123,7 +122,7 @@ int main(int argc, char **argv ){
 	MascaraY[6] =  1; //P7
 	MascaraY[7] =  2; //P8
 	MascaraY[8] =  1; //P9
-
+	
 	//Leitura da imagem entrada
 	for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
 		ali = (cabecalho.largura * 3) % 4;
@@ -141,6 +140,30 @@ int main(int argc, char **argv ){
 		}
 	}
 
+	//Compartilhar memoria
+    shmid = shmget(chave, cabecalho.altura*cabecalho.largura*sizeof(RGB), 0600 | IPC_CREAT);
+	if ((shmget(chave, cabecalho.altura*cabecalho.largura*sizeof(RGB), 0600 | IPC_CREAT)) < 0) {
+		printf("Erro no compartilhamento da memoria \n");
+		exit(0);
+	}
+
+	//Alocar memoria compartilhada
+	imagemSaida = (RGB *)shmat(shmid, 0, 0);
+	if (((RGB *)shmat(shmid, 0, 0)) < 0) {
+		printf("Erro ao alocar memoria compartilhada\n");
+		exit(0);
+	}
+
+	//Fork
+	id_seq = 0;
+    for(i=1; i<np;i++){
+        pid = fork();
+        if ( pid == 0){
+            id_seq = i;
+            break;
+        } 
+    }
+
 	//Transformar em escala de cinza
 	for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
 		for(jForImagem=0; jForImagem<cabecalho.largura; jForImagem++){
@@ -151,54 +174,56 @@ int main(int argc, char **argv ){
 			imagemCinza[iPosMatriz].blue   = (0.2126 * imagemEntrada[iPosMatriz].red) + (0.7152 * imagemEntrada[iPosMatriz].green) + (0.0722 * imagemEntrada[iPosMatriz].blue);
 		}
 	}
+
+	//Varrer os pixels da imagem
+	for(iForImagem=1; iForImagem<(cabecalho.altura-1); iForImagem++){
+		for(jForImagem=1; jForImagem<(cabecalho.largura-1); jForImagem++){
+			//Calcular as posicoes
+			iPosLinhaAnt  = (iForImagem-1) * cabecalho.largura;
+			jPosColunaAnt = jForImagem-1;
+
+			iPosLinha  = (iForImagem) * cabecalho.largura;
+			jPosColuna = jForImagem;
+
+			iPosLinhaPrx  = (iForImagem+1) * cabecalho.largura;
+			jPosColunaPrx = jForImagem+1;
+
+			//Mascaras
+			valorX   = MascaraX[0] * imagemCinza[(iPosLinhaAnt) + (jPosColunaAnt)].red
+						+ MascaraX[1] * imagemCinza[(iPosLinhaAnt) + (jPosColuna)].red
+						+ MascaraX[2] * imagemCinza[(iPosLinhaAnt) + (jPosColunaPrx)].red
+						+ MascaraX[3] * imagemCinza[(iPosLinha)    + (jPosColunaAnt)].red
+						+ MascaraX[4] * imagemCinza[(iPosLinha)    + (jPosColuna)].red
+						+ MascaraX[5] * imagemCinza[(iPosLinha)    + (jPosColunaPrx)].red
+						+ MascaraX[6] * imagemCinza[(iPosLinhaPrx) + (jPosColunaAnt)].red
+						+ MascaraX[7] * imagemCinza[(iPosLinhaPrx) + (jPosColuna)].red
+						+ MascaraX[8] * imagemCinza[(iPosLinhaPrx) + (jPosColunaPrx)].red; 
+
+			valorY   = MascaraY[0] * imagemCinza[(iPosLinhaAnt) + (jPosColunaAnt)].red
+						+ MascaraY[1] * imagemCinza[(iPosLinhaAnt) + (jPosColuna)].red
+						+ MascaraY[2] * imagemCinza[(iPosLinhaAnt) + (jPosColunaPrx)].red
+						+ MascaraY[3] * imagemCinza[(iPosLinha)    + (jPosColunaAnt)].red
+						+ MascaraY[4] * imagemCinza[(iPosLinha)    + (jPosColuna)].red
+						+ MascaraY[5] * imagemCinza[(iPosLinha)    + (jPosColunaPrx)].red
+						+ MascaraY[6] * imagemCinza[(iPosLinhaPrx) + (jPosColunaAnt)].red
+						+ MascaraY[7] * imagemCinza[(iPosLinhaPrx) + (jPosColuna)].red
+						+ MascaraY[8] * imagemCinza[(iPosLinhaPrx) + (jPosColunaPrx)].red;
 	
-	if (1 == 1){
-		//Varrer os pixels da imagem
-		for(iForImagem=1; iForImagem<(cabecalho.altura-1); iForImagem++){
-			for(jForImagem=1; jForImagem<(cabecalho.largura-1); jForImagem++){
-				//Calcular as posicoes
-				iPosLinhaAnt  = (iForImagem-1) * cabecalho.largura;
-				jPosColunaAnt = jForImagem-1;
+			//Imagem de saida		
+			iPosMatriz = iPosLinha + jForImagem;
 
-				iPosLinha  = (iForImagem) * cabecalho.largura;
-				jPosColuna = jForImagem;
-
-				iPosLinhaPrx  = (iForImagem+1) * cabecalho.largura;
-				jPosColunaPrx = jForImagem+1;
-
-				//Mascaras
-				valorX   = MascaraX[0] * imagemCinza[(iPosLinhaAnt) + (jPosColunaAnt)].red
-						 + MascaraX[1] * imagemCinza[(iPosLinhaAnt) + (jPosColuna)].red
-						 + MascaraX[2] * imagemCinza[(iPosLinhaAnt) + (jPosColunaPrx)].red
-						 + MascaraX[3] * imagemCinza[(iPosLinha)    + (jPosColunaAnt)].red
-						 + MascaraX[4] * imagemCinza[(iPosLinha)    + (jPosColuna)].red
-						 + MascaraX[5] * imagemCinza[(iPosLinha)    + (jPosColunaPrx)].red
-						 + MascaraX[6] * imagemCinza[(iPosLinhaPrx) + (jPosColunaAnt)].red
-						 + MascaraX[7] * imagemCinza[(iPosLinhaPrx) + (jPosColuna)].red
-						 + MascaraX[8] * imagemCinza[(iPosLinhaPrx) + (jPosColunaPrx)].red; 
-
-				valorY   = MascaraY[0] * imagemCinza[(iPosLinhaAnt) + (jPosColunaAnt)].red
-						 + MascaraY[1] * imagemCinza[(iPosLinhaAnt) + (jPosColuna)].red
-						 + MascaraY[2] * imagemCinza[(iPosLinhaAnt) + (jPosColunaPrx)].red
-						 + MascaraY[3] * imagemCinza[(iPosLinha)    + (jPosColunaAnt)].red
-						 + MascaraY[4] * imagemCinza[(iPosLinha)    + (jPosColuna)].red
-						 + MascaraY[5] * imagemCinza[(iPosLinha)    + (jPosColunaPrx)].red
-						 + MascaraY[6] * imagemCinza[(iPosLinhaPrx) + (jPosColunaAnt)].red
-						 + MascaraY[7] * imagemCinza[(iPosLinhaPrx) + (jPosColuna)].red
-						 + MascaraY[8] * imagemCinza[(iPosLinhaPrx) + (jPosColunaPrx)].red;
-		
-				//Imagem de saida		
-				iPosMatriz = iPosLinha + jForImagem;
-
-				imagemSaida[iPosMatriz].red    = sqrt(pow(valorX,2) + pow(valorY,2));
-				imagemSaida[iPosMatriz].green  = sqrt(pow(valorX,2) + pow(valorY,2));
-				imagemSaida[iPosMatriz].blue   = sqrt(pow(valorX,2) + pow(valorY,2));
-			}
+			imagemSaida[iPosMatriz].red    = sqrt(pow(valorX,2) + pow(valorY,2));
+			imagemSaida[iPosMatriz].green  = sqrt(pow(valorX,2) + pow(valorY,2));
+			imagemSaida[iPosMatriz].blue   = sqrt(pow(valorX,2) + pow(valorY,2));
 		}
 	}
-
+	
 	//Escrever arquivo saida
-	if (1 == 1) {
+	if (id_seq == 0) {
+		for(i=1; i<np;i++){
+            wait(NULL);
+        }    
+
 		//Escrever cabecalho saida
 		fwrite(&cabecalho, sizeof(CABECALHO), 1, fout);
 
@@ -218,16 +243,17 @@ int main(int argc, char **argv ){
 				fwrite(&aux, sizeof(unsigned char), 1, fout);
 			}
 		}
+
+		//Limpar compartilhamento
+		shmdt(imagemSaida);
+		shmctl(shmid, IPC_RMID, 0);
+
+		printf("Arquivo %s gerado.\n", saida);
+	}
+	else {
+		shmdt(imagemSaida);
 	}
 
 	fclose(fin);
 	fclose(fout);
-
-	free(imagemEntrada);
-    free(imagemSaida);
-	free(imagemCinza);
-	free(imagemX);
-    free(imagemY);
-
-	printf("Arquivo %s gerado.\n", saida);
 }
