@@ -59,7 +59,6 @@ int main(int argc, char **argv ){
 	int iPosLinhaAnt, jPosColunaAnt;
 	int iPosLinha, jPosColuna;
 	int iPosLinhaPrx, jPosColunaPrx;
-
 	int pid, id_seq;
 	int shmid, chave = 5;
 	int i;
@@ -68,7 +67,6 @@ int main(int argc, char **argv ){
 	RGB *imagemEntrada, *imagemSaida;
 	RGB *imagemX, *imagemY;
 	RGB *imagemCinza;
-	RGB *imagemCompartilhada;
 	
 	if ( argc != 4){
 		printf("%s <img_entrada> <img_saida> <num_proc> \n", argv[0]);
@@ -96,7 +94,6 @@ int main(int argc, char **argv ){
 
 	//Alocar imagems
 	imagemEntrada   = (RGB *)malloc(cabecalho.altura*cabecalho.largura*sizeof(RGB));
-	//imagemSaida  	= (RGB *)malloc(cabecalho.altura*cabecalho.largura*sizeof(RGB));
 	imagemCinza  	= (RGB *)malloc(cabecalho.altura*cabecalho.largura*sizeof(RGB));
 	imagemX  		= (RGB *)malloc((3*3)*sizeof(RGB));
 	imagemY  		= (RGB *)malloc((3*3)*sizeof(RGB));
@@ -140,6 +137,17 @@ int main(int argc, char **argv ){
 		}
 	}
 
+	//Transformar em escala de cinza
+	for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
+		for(jForImagem=0; jForImagem<cabecalho.largura; jForImagem++){
+			iPosMatriz = iForImagem * cabecalho.largura + jForImagem;
+
+			imagemCinza[iPosMatriz].red    = (0.2126 * imagemEntrada[iPosMatriz].red) + (0.7152 * imagemEntrada[iPosMatriz].green) + (0.0722 * imagemEntrada[iPosMatriz].blue);
+			imagemCinza[iPosMatriz].green  = (0.2126 * imagemEntrada[iPosMatriz].red) + (0.7152 * imagemEntrada[iPosMatriz].green) + (0.0722 * imagemEntrada[iPosMatriz].blue);
+			imagemCinza[iPosMatriz].blue   = (0.2126 * imagemEntrada[iPosMatriz].red) + (0.7152 * imagemEntrada[iPosMatriz].green) + (0.0722 * imagemEntrada[iPosMatriz].blue);
+		}
+	}
+
 	//Compartilhar memoria
     shmid = shmget(chave, cabecalho.altura*cabecalho.largura*sizeof(RGB), 0600 | IPC_CREAT);
 	if ((shmget(chave, cabecalho.altura*cabecalho.largura*sizeof(RGB), 0600 | IPC_CREAT)) < 0) {
@@ -156,27 +164,17 @@ int main(int argc, char **argv ){
 
 	//Fork
 	id_seq = 0;
+
     for(i=1; i<np;i++){
         pid = fork();
         if ( pid == 0){
             id_seq = i;
-            break;
+			break;
         } 
     }
 
-	//Transformar em escala de cinza
-	for(iForImagem=0; iForImagem<cabecalho.altura; iForImagem++){
-		for(jForImagem=0; jForImagem<cabecalho.largura; jForImagem++){
-			iPosMatriz = iForImagem * cabecalho.largura + jForImagem;
-
-			imagemCinza[iPosMatriz].red    = (0.2126 * imagemEntrada[iPosMatriz].red) + (0.7152 * imagemEntrada[iPosMatriz].green) + (0.0722 * imagemEntrada[iPosMatriz].blue);
-			imagemCinza[iPosMatriz].green  = (0.2126 * imagemEntrada[iPosMatriz].red) + (0.7152 * imagemEntrada[iPosMatriz].green) + (0.0722 * imagemEntrada[iPosMatriz].blue);
-			imagemCinza[iPosMatriz].blue   = (0.2126 * imagemEntrada[iPosMatriz].red) + (0.7152 * imagemEntrada[iPosMatriz].green) + (0.0722 * imagemEntrada[iPosMatriz].blue);
-		}
-	}
-
-	//Varrer os pixels da imagem
-	for(iForImagem=1; iForImagem<(cabecalho.altura-1); iForImagem++){
+	//Aplicar filtro Sobel
+	for(iForImagem=id_seq; iForImagem<(cabecalho.altura-1); iForImagem+=np){
 		for(jForImagem=1; jForImagem<(cabecalho.largura-1); jForImagem++){
 			//Calcular as posicoes
 			iPosLinhaAnt  = (iForImagem-1) * cabecalho.largura;
@@ -190,24 +188,24 @@ int main(int argc, char **argv ){
 
 			//Mascaras
 			valorX   = MascaraX[0] * imagemCinza[(iPosLinhaAnt) + (jPosColunaAnt)].red
-						+ MascaraX[1] * imagemCinza[(iPosLinhaAnt) + (jPosColuna)].red
-						+ MascaraX[2] * imagemCinza[(iPosLinhaAnt) + (jPosColunaPrx)].red
-						+ MascaraX[3] * imagemCinza[(iPosLinha)    + (jPosColunaAnt)].red
-						+ MascaraX[4] * imagemCinza[(iPosLinha)    + (jPosColuna)].red
-						+ MascaraX[5] * imagemCinza[(iPosLinha)    + (jPosColunaPrx)].red
-						+ MascaraX[6] * imagemCinza[(iPosLinhaPrx) + (jPosColunaAnt)].red
-						+ MascaraX[7] * imagemCinza[(iPosLinhaPrx) + (jPosColuna)].red
-						+ MascaraX[8] * imagemCinza[(iPosLinhaPrx) + (jPosColunaPrx)].red; 
+					 + MascaraX[1] * imagemCinza[(iPosLinhaAnt) + (jPosColuna)].red
+					 + MascaraX[2] * imagemCinza[(iPosLinhaAnt) + (jPosColunaPrx)].red
+					 + MascaraX[3] * imagemCinza[(iPosLinha)    + (jPosColunaAnt)].red
+					 + MascaraX[4] * imagemCinza[(iPosLinha)    + (jPosColuna)].red
+					 + MascaraX[5] * imagemCinza[(iPosLinha)    + (jPosColunaPrx)].red
+					 + MascaraX[6] * imagemCinza[(iPosLinhaPrx) + (jPosColunaAnt)].red
+					 + MascaraX[7] * imagemCinza[(iPosLinhaPrx) + (jPosColuna)].red
+					 + MascaraX[8] * imagemCinza[(iPosLinhaPrx) + (jPosColunaPrx)].red; 
 
 			valorY   = MascaraY[0] * imagemCinza[(iPosLinhaAnt) + (jPosColunaAnt)].red
-						+ MascaraY[1] * imagemCinza[(iPosLinhaAnt) + (jPosColuna)].red
-						+ MascaraY[2] * imagemCinza[(iPosLinhaAnt) + (jPosColunaPrx)].red
-						+ MascaraY[3] * imagemCinza[(iPosLinha)    + (jPosColunaAnt)].red
-						+ MascaraY[4] * imagemCinza[(iPosLinha)    + (jPosColuna)].red
-						+ MascaraY[5] * imagemCinza[(iPosLinha)    + (jPosColunaPrx)].red
-						+ MascaraY[6] * imagemCinza[(iPosLinhaPrx) + (jPosColunaAnt)].red
-						+ MascaraY[7] * imagemCinza[(iPosLinhaPrx) + (jPosColuna)].red
-						+ MascaraY[8] * imagemCinza[(iPosLinhaPrx) + (jPosColunaPrx)].red;
+					 + MascaraY[1] * imagemCinza[(iPosLinhaAnt) + (jPosColuna)].red
+					 + MascaraY[2] * imagemCinza[(iPosLinhaAnt) + (jPosColunaPrx)].red
+					 + MascaraY[3] * imagemCinza[(iPosLinha)    + (jPosColunaAnt)].red
+					 + MascaraY[4] * imagemCinza[(iPosLinha)    + (jPosColuna)].red
+					 + MascaraY[5] * imagemCinza[(iPosLinha)    + (jPosColunaPrx)].red
+					 + MascaraY[6] * imagemCinza[(iPosLinhaPrx) + (jPosColunaAnt)].red
+					 + MascaraY[7] * imagemCinza[(iPosLinhaPrx) + (jPosColuna)].red
+					 + MascaraY[8] * imagemCinza[(iPosLinhaPrx) + (jPosColunaPrx)].red;
 	
 			//Imagem de saida		
 			iPosMatriz = iPosLinha + jForImagem;
@@ -219,7 +217,10 @@ int main(int argc, char **argv ){
 	}
 	
 	//Escrever arquivo saida
-	if (id_seq == 0) {
+	if (id_seq != 0){
+        shmdt(imagemSaida);
+    }	
+	else {
 		for(i=1; i<np;i++){
             wait(NULL);
         }    
@@ -249,9 +250,6 @@ int main(int argc, char **argv ){
 		shmctl(shmid, IPC_RMID, 0);
 
 		printf("Arquivo %s gerado.\n", saida);
-	}
-	else {
-		shmdt(imagemSaida);
 	}
 
 	fclose(fin);
